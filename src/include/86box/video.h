@@ -449,6 +449,7 @@ extern const device_t pgc_device;
 
 /* Matrox MGA */
 extern const device_t millennium_device;
+extern const device_t athena_device;
 extern const device_t mystique_device;
 extern const device_t mystique_220_device;
 extern const device_t millennium_ii_device;

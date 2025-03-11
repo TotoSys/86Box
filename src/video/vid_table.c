@@ -188,6 +188,7 @@ video_cards[] = {
     { .device = &millennium_ii_device,                          .flags = VIDEO_FLAG_TYPE_NONE },
     { .device = &mystique_device,                               .flags = VIDEO_FLAG_TYPE_NONE },
     { .device = &mystique_220_device,                           .flags = VIDEO_FLAG_TYPE_NONE },
+    { .device = &athena_device,                                 .flags = VIDEO_FLAG_TYPE_NONE },
     { .device = &tgui9440_pci_device,                           .flags = VIDEO_FLAG_TYPE_NONE },
     { .device = &tgui9660_pci_device,                           .flags = VIDEO_FLAG_TYPE_NONE },
     { .device = &tgui9680_pci_device,                           .flags = VIDEO_FLAG_TYPE_NONE },

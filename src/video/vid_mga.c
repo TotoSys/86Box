@@ -38,6 +38,7 @@
 #include <86box/vid_svga.h>
 #include <86box/vid_svga_render.h>
 
+#define ROM_IMPRESSION    "roms/video/matrox/matroxisathenar1.BIN"
 #define ROM_MILLENNIUM    "roms/video/matrox/matrox2064wr2.BIN"
 #define ROM_MILLENNIUM_II "roms/video/matrox/matrox2164wpc.BIN"
 #define ROM_MYSTIQUE      "roms/video/matrox/MYSTIQUE.VBI"
@@ -123,6 +124,9 @@
 #define REG_DR3_Z32MSB      0x2c6c
 #define REG_TEXFILTER       0x2c58
 
+#define REG_VRAMPAGE     0x1e00
+#define REG_BYTACCDATA   0x1e08
+#define REG_ADRGEN       0x1e0c
 #define REG_FIFOSTATUS   0x1e10
 #define REG_STATUS       0x1e14
 #define REG_ICLEAR       0x1e18
@@ -408,6 +412,7 @@
 #define OPTION_INTERLEAVE (1 << 12)
 
 enum {
+    ATHENA,  /*Impression Plus*/
     MGA_2064W,  /*Millennium*/
     MGA_1064SG, /*Mystique*/
     MGA_1164SG, /*Mystique 220*/
@@ -663,6 +668,7 @@ static double bayer_mat[4][4] =
     { 15. / 16., 7. / 16., 13. / 16., 5. / 16.},
 };
 
+static video_timings_t timing_matrox_impression = { .type = VIDEO_PCI, .write_b = 4, .write_w = 4, .write_l = 4, .read_b = 10, .read_w = 10, .read_l = 10 };
 static video_timings_t timing_matrox_millennium = { .type = VIDEO_PCI, .write_b = 2, .write_w = 2, .write_l = 1, .read_b = 10, .read_w = 10, .read_l = 10 };
 static video_timings_t timing_matrox_mystique   = { .type = VIDEO_PCI, .write_b = 4, .write_w = 4, .write_l = 4, .read_b = 10, .read_w = 10, .read_l = 10 };
 
@@ -6211,12 +6217,16 @@ mystique_pci_read(UNUSED(int func), int addr, void *priv)
             case 0x02:
                 if (mystique->type == MGA_G100)
                     ret = 0x01;
+                else if (mystique->type == ATHENA)
+                    ret = 0x10;
                 else
                     ret = (mystique->type == MGA_2164W) ? 0x1b : ((mystique->type == MGA_2064W) ? 0x19 : 0x1a);
                 break; /*MGA*/
             case 0x03:
                 if (mystique->type == MGA_G100)
                     ret = 0x10;
+                else if (mystique->type == ATHENA)
+                    ret = 0x0d;
                 else
                     ret = 0x05;
                 break;
@@ -6236,7 +6246,10 @@ mystique_pci_read(UNUSED(int func), int addr, void *priv)
                 break; /*Fast DEVSEL timing*/
 
             case 0x08:
-                ret = (mystique->type == MGA_1164SG) ? 3 : 0;
+                if (mystique->type == ATHENA)
+                    ret = 0;
+                else
+                    ret = (mystique->type == MGA_1164SG) ? 3 : 0;
                 break; /*Revision ID*/
             case 0x09:
                 ret = 0;
@@ -6272,35 +6285,39 @@ mystique_pci_read(UNUSED(int func), int addr, void *priv)
                 break;
 
             case 0x14:
-                ret = 0x00;
+                if ((mystique->type >= MGA_2164W) && (mystique->type >= MGA_2064W) && (mystique->type >= MGA_G100))
+                    ret = 0x00;
                 break; /*LFB for Millennium and Mystique, Control aperture for Mystique 220 and later*/
             case 0x15:
                 if (mystique->type >= MGA_1164SG)
                     ret = (mystique->ctrl_base >> 8) & 0xc0;
-                else
+                else if ((mystique->type >= MGA_2164W) && (mystique->type >= MGA_2064W) && (mystique->type >= MGA_G100))
                     ret = 0x00;
                 break;
             case 0x16:
                 if (mystique->type >= MGA_1164SG)
                     ret = mystique->ctrl_base >> 16;
-                else
+                else if ((mystique->type >= MGA_2164W) && (mystique->type >= MGA_2064W) && (mystique->type >= MGA_G100))
                     ret = (mystique->lfb_base >> 16) & 0x80;
                 break;
             case 0x17:
                 if (mystique->type >= MGA_1164SG)
                     ret = mystique->ctrl_base >> 24;
-                else
+                else if ((mystique->type >= MGA_2164W) && (mystique->type >= MGA_2064W) && (mystique->type >= MGA_G100))
                     ret = mystique->lfb_base >> 24;
                 break;
 
             case 0x18:
-                ret = 0x00;
+                if ((mystique->type >= MGA_2164W) && (mystique->type >= MGA_2064W) && (mystique->type >= MGA_G100))
+                    ret = 0x00;
                 break; /*Pseudo-DMA (ILOAD)*/
             case 0x1a:
-                ret = (mystique->iload_base >> 16) & 0x80;
+                if ((mystique->type >= MGA_2164W) && (mystique->type >= MGA_2064W) && (mystique->type >= MGA_G100))
+                    ret = (mystique->iload_base >> 16) & 0x80;
                 break;
             case 0x1b:
-                ret = mystique->iload_base >> 24;
+                if ((mystique->type >= MGA_2164W) && (mystique->type >= MGA_2064W) && (mystique->type >= MGA_G100))
+                    ret = mystique->iload_base >> 24;
                 break;
 
             case 0x2c:
@@ -6641,6 +6658,8 @@ mystique_init(const device_t *info)
 
     if (mystique->type == MGA_2064W)
         romfn = ROM_MILLENNIUM;
+    else if (mystique->type == ATHENA)
+        romfn = ROM_IMPRESSION;
     else if (mystique->type == MGA_2164W)
         romfn = ROM_MILLENNIUM_II;
     else if (mystique->type == MGA_1064SG)
@@ -6676,6 +6695,22 @@ mystique_init(const device_t *info)
         mystique->svga.getclock          = tvp3026_getclock;
         mystique->svga.conv_16to32       = tvp3026_conv_16to32;
         if (mystique->type == MGA_2164W)
+            mystique->svga.decode_mask = 0xffffff;
+
+        tvp3026_gpio(mystique_tvp3026_gpio_read, mystique_tvp3026_gpio_write, mystique, mystique->svga.ramdac);
+    } else if (mystique->type == ATHENA) {
+        video_inform(VIDEO_FLAG_TYPE_SPECIAL, (mystique->type == MGA_2164W) ? &timing_matrox_mystique : &timing_matrox_millennium);
+        svga_init(info, &mystique->svga, mystique, mystique->vram_size << 20,
+                  mystique_recalctimings,
+                  mystique_in, mystique_out,
+                  NULL,
+                  NULL);
+        mystique->svga.dac_hwcursor_draw = tvp3026_hwcursor_draw;
+        mystique->svga.ramdac            = device_add(&tvp3026_ramdac_device);
+        mystique->svga.clock_gen         = mystique->svga.ramdac;
+        mystique->svga.getclock          = tvp3026_getclock;
+        mystique->svga.conv_16to32       = tvp3026_conv_16to32;
+        if (mystique->type == ATHENA)
             mystique->svga.decode_mask = 0xffffff;
 
         tvp3026_gpio(mystique_tvp3026_gpio_read, mystique_tvp3026_gpio_write, mystique, mystique->svga.ramdac);
@@ -6805,6 +6840,12 @@ millennium_available(void)
 }
 
 static int
+athena_available(void)
+{
+    return rom_present(ROM_IMPRESSION);
+}
+
+static int
 mystique_available(void)
 {
     return rom_present(ROM_MYSTIQUE);
@@ -6845,6 +6886,27 @@ mystique_force_redraw(void *priv)
 
     mystique->svga.fullchange = changeframecount;
 }
+
+static const device_config_t athena_config[] = {
+  // clang-format off
+    {
+        .name           = "memory",
+        .description    = "Memory size",
+        .type           = CONFIG_SELECTION,
+        .default_string = NULL,
+        .default_int    = 8,
+        .file_filter    = NULL,
+        .spinner        = { 0 },
+        .selection      = {
+            { .description = "2 MB", .value = 2 },
+            { .description = "6 MB", .value = 6 },
+            { .description = ""                 }
+        },
+        .bios           = { { 0 } }
+    },
+    { .name = "", .description = "", .type = CONFIG_END }
+  // clang-format on
+};
 
 static const device_config_t mystique_config[] = {
   // clang-format off
@@ -6902,6 +6964,20 @@ const device_t millennium_device = {
     .speed_changed = mystique_speed_changed,
     .force_redraw  = mystique_force_redraw,
     .config        = mystique_config
+};
+
+const device_t athena_device = {
+    .name          = "Matrox Impression Plus",
+    .internal_name = "athena",
+    .flags         = DEVICE_PCI,
+    .local         = ATHENA,
+    .init          = mystique_init,
+    .close         = mystique_close,
+    .reset         = NULL,
+    .available     = athena_available,
+    .speed_changed = mystique_speed_changed,
+    .force_redraw  = mystique_force_redraw,
+    .config        = athena_config
 };
 
 const device_t mystique_device = {
