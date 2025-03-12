@@ -668,7 +668,7 @@ static double bayer_mat[4][4] =
     { 15. / 16., 7. / 16., 13. / 16., 5. / 16.},
 };
 
-static video_timings_t timing_matrox_impression = { .type = VIDEO_PCI, .write_b = 4, .write_w = 4, .write_l = 4, .read_b = 10, .read_w = 10, .read_l = 10 };
+static video_timings_t timing_matrox_impression = { .type = VIDEO_PCI, .write_b = 2, .write_w = 2, .write_l = 1, .read_b = 10, .read_w = 10, .read_l = 10 };
 static video_timings_t timing_matrox_millennium = { .type = VIDEO_PCI, .write_b = 2, .write_w = 2, .write_l = 1, .read_b = 10, .read_w = 10, .read_l = 10 };
 static video_timings_t timing_matrox_mystique   = { .type = VIDEO_PCI, .write_b = 4, .write_w = 4, .write_l = 4, .read_b = 10, .read_w = 10, .read_l = 10 };
 
